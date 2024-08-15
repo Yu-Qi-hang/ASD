@@ -26,7 +26,7 @@ if __name__ == "__main__":
         video_filter = f"[0:v]trim=start={start_sec}:end={end_sec},setpts=PTS-STARTPTS,crop={right-left}:{bottom-top}:{left}:{top},scale=512:512[v{index}];"
         audio_filter = f"[0:a]atrim=start={start_sec}:end={end_sec},asetpts=PTS-STARTPTS[a{index}];"
         filters.append(video_filter + audio_filter)
-        cmd_post.extend(['-map', f'[v{index}]', '-map', f'[a{index}]', '-c:v' ,'libx264' ,'-c:a' ,'aac', '-y', out_path])
+        cmd_post.extend(['-map', f'[v{index}]', '-map', f'[a{index}]', '-async', '1', '-r', '25', '-c:v' ,'libx264' ,'-c:a' ,'aac', '-y', '-loglevel', 'panic', out_path])
     filter_complex = ''.join(filters)[:-1]
     ffmpeg_cmd.insert(1, '-i')
     ffmpeg_cmd.insert(2, raw_vid_path)

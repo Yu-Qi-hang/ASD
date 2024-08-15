@@ -423,28 +423,36 @@ if __name__ == '__main__':
 	sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face track and detected %d tracks \r\n" %len(allTracks))
 
 	# Face clips cropping
-	for ii, track in tqdm.tqdm(enumerate(allTracks), total = len(allTracks)):
-		vidTracks.append(crop_video(args, track, os.path.join(args.pycropPath, '%05d'%ii)))
 	savePath = os.path.join(args.pyworkPath, 'tracks.pckl')
-	with open(savePath, 'wb') as fil:
-		pickle.dump(vidTracks, fil)
-	sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face Crop and saved in %s tracks \r\n" %args.pycropPath)
-	fil = open(savePath, 'rb')
-	vidTracks = pickle.load(fil)
+	if os.path.isfile(savePath):
+		with open(savePath, 'rb') as fil:
+			vidTracks = pickle.load(fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face Crop already existed in %s \r\n" %(args.pycropPath))
+	else:
+		for ii, track in tqdm.tqdm(enumerate(allTracks), total = len(allTracks)):
+			vidTracks.append(crop_video(args, track, os.path.join(args.pycropPath, '%05d'%ii)))
+		with open(savePath, 'wb') as fil:
+			pickle.dump(vidTracks, fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face Crop and saved in %s tracks \r\n" %args.pycropPath)
 
 	# Active Speaker Detection
-	files = glob.glob("%s/*.avi"%args.pycropPath)
-	files.sort()
-	scores = evaluate_network(files, args)
 	savePath = os.path.join(args.pyworkPath, 'scores.pckl')
-	with open(savePath, 'wb') as fil:
-		pickle.dump(scores, fil)
-	sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scores extracted and saved in %s \r\n" %args.pyworkPath)
+	if os.path.isfile(savePath):
+		with open(savePath, 'rb') as fil:
+			scores = pickle.load(fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scores already existed in %s \r\n" %(args.pyworkPath))
+	else:
+		files = glob.glob("%s/*.avi"%args.pycropPath)
+		files.sort()
+		scores = evaluate_network(files, args)
+		with open(savePath, 'wb') as fil:
+			pickle.dump(scores, fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scores extracted and saved in %s \r\n" %args.pyworkPath)
 
 	all_scores = []
 	new_scores = []
 	di_scores = []
-	for clips in scores:
+	for clips in tqdm.tqdm(scores):
 		all_scores.extend(clips)
 		newclip = [min(1,x+1) for x in clips]
 		for iidx,item in enumerate(newclip):
@@ -455,9 +463,9 @@ if __name__ == '__main__':
 		new_scores.append(newclip)
 		di_scores.extend(newclip)
 	ret_score = visualization(vidTracks, new_scores, args)
-	xs1 = [i for i in range(len(all_scores))]
-	xs2 = [i for i in range(len(ret_score))]
-	plt.figure(figsize=(12, 5))
-	plt.plot(xs1, all_scores, color='olive')
-	plt.plot(xs2, ret_score, color='salmon')
-	plt.savefig(os.path.join(args.pyaviPath,'scores.png'), dpi=300, bbox_inches='tight')
+	# xs1 = [i for i in range(len(all_scores))]
+	# xs2 = [i for i in range(len(ret_score))]
+	# plt.figure(figsize=(12, 5))
+	# plt.plot(xs1, all_scores, color='olive')
+	# plt.plot(xs2, ret_score, color='salmon')
+	# plt.savefig(os.path.join(args.pyaviPath,'scores.png'), dpi=300, bbox_inches='tight')

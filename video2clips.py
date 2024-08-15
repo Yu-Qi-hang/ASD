@@ -16,7 +16,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     videos = [x[:-4] for x in os.listdir(args.video_dir) if x[-4:] in vid_ext] if args.vid_id == '' else [x.split('.')[0] for x in args.vid_id.split(',')]
-
+    videos.sort()
+    
     pool = Pool(args.num_worker)
     for video in videos:
         pool.apply_async(async_proxy,(f'python evaluate.py  --videoFolder {args.video_dir} --videoName {video} && python process.py --work_dir {args.video_dir} --vid_id {video}',))

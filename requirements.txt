@@ -1,0 +1,9 @@
+numpy==1.23.4
+scipy==1.10.1
+scikit-learn==1.5.1
+scenedetect==0.6.4
+opencv-contrib-python==4.8.1.78
+opencv-python==4.10.0.84
+python-speech-features==0.6
+tqdm
+ffmpeg
