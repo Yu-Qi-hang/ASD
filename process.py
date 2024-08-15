@@ -32,5 +32,4 @@ if __name__ == "__main__":
     ffmpeg_cmd.insert(2, raw_vid_path)
     ffmpeg_cmd.extend(['-filter_complex', filter_complex])
     ffmpeg_cmd.extend(cmd_post)
-    print(ffmpeg_cmd)
     subprocess.run(ffmpeg_cmd)

@@ -76,7 +76,7 @@ def inference_video(args):
 		sys.stderr.write('%s-%05d; %d dets\r' % (args.videoFilePath, fidx, len(dets[-1])))
 	return dets
 
-def bb_intersection_over_union(boxA, boxB, evalCol = False):
+def bb_intersection_over_union(boxA, boxB):
 	# CPU: IOU Function to calculate overlap between two image
 	xA = max(boxA[0], boxB[0])#left
 	yA = max(boxA[1], boxB[1])#top
@@ -85,10 +85,7 @@ def bb_intersection_over_union(boxA, boxB, evalCol = False):
 	interArea = max(0, xB - xA) * max(0, yB - yA)
 	boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
 	boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
-	if evalCol == True:
-		iou = interArea / float(boxAArea)
-	else:
-		iou = interArea / float(boxAArea + boxBArea - interArea)
+	iou = interArea / float(boxAArea + boxBArea - interArea)
 	return iou
 
 def track_shot(args, sceneFaces):
@@ -341,9 +338,6 @@ if __name__ == '__main__':
 
 	parser.add_argument('--start',                 type=int, default=0,   help='The start time of the video')
 	parser.add_argument('--duration',              type=int, default=0,  help='The duration of the video, when set as 0, will extract the whole video')
-
-	parser.add_argument('--evalCol',               dest='evalCol', action='store_true', help='Evaluate on Columbia dataset')
-	parser.add_argument('--colSavePath',           type=str, default="/colDataPath",  help='Path for inputs, tmps and outputs')
 
 	args = parser.parse_args()
 
