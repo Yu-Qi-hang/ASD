@@ -1,4 +1,5 @@
 model/faceDetector/s3fd/sfd_face.pth
 weight/
 video_dir/
+results/
 **/__pycache__/

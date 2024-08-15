@@ -326,7 +326,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description = "Columbia ASD Evaluation")
 
 	parser.add_argument('--videoName',             type=str, default="col",   help='Demo video name')
-	parser.add_argument('--videoFolder',           type=str, default="colDataPath",  help='Path for inputs, tmps and outputs')
+	parser.add_argument('--videoFolder',           type=str, default="colDataPath",  help='Path for inputs')
+	parser.add_argument('--saveFolder',            type=str, default="results",  help='Path for tmps and outputs')
 	parser.add_argument('--pretrainModel',         type=str, default="weight/pretrain_AVA_CVPR.model",   help='Path for the pretrained model')
 
 	parser.add_argument('--nDataLoaderThread',     type=int,   default=20,   help='Number of workers')
@@ -343,7 +344,7 @@ if __name__ == '__main__':
 
 
 	args.videoPath = glob.glob(os.path.join(args.videoFolder, args.videoName + '.*'))[0]
-	args.savePath = os.path.join(args.videoFolder, args.videoName)
+	args.savePath = os.path.join(args.saveFolder, args.videoName)
 	# Initialization 
 	args.pyaviPath = os.path.join(args.savePath, 'pyavi')
 	args.pyframesPath = os.path.join(args.savePath, 'pyframes')

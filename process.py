@@ -7,10 +7,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_dir', type=str, help='video root')
     parser.add_argument('--vid_id', type=str, help='video name')
+    parser.add_argument('--save_dir', type=str, default="results", help='Path for tmps and outputs')
     args = parser.parse_args()
     raw_vid_path = f'{args.work_dir}/{args.vid_id}.mp4'
-    clip_json = f'{args.work_dir}/{args.vid_id}/pyavi/clips.json'
-    save_folder = f'{args.work_dir}/clips/{args.vid_id}'
+    clip_json = f'{args.save_dir}/{args.vid_id}/pyavi/clips.json'
+    save_folder = f'{args.save_dir}/clips/{args.vid_id}'
     if os.path.isdir(save_folder):
         subprocess.call(f'rm -r {save_folder}',shell=True)
     os.makedirs(save_folder,exist_ok=True)
