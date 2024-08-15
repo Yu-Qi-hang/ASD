@@ -332,7 +332,7 @@ if __name__ == '__main__':
 	parser.add_argument('--videoFolder',           type=str, default="colDataPath",  help='Path for inputs, tmps and outputs')
 	parser.add_argument('--pretrainModel',         type=str, default="weight/pretrain_AVA_CVPR.model",   help='Path for the pretrained model')
 
-	parser.add_argument('--nDataLoaderThread',     type=int,   default=10,   help='Number of workers')
+	parser.add_argument('--nDataLoaderThread',     type=int,   default=20,   help='Number of workers')
 	parser.add_argument('--facedetScale',          type=float, default=0.25, help='Scale factor for face detection, the frames will be scale to 0.25 orig')
 	parser.add_argument('--minTrack',              type=int,   default=10,   help='Number of min frames for each shot')
 	parser.add_argument('--numFailedDet',          type=int,   default=10,   help='Number of missed detections allowed before tracking is stopped')
