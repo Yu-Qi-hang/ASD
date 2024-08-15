@@ -1,4 +1,4 @@
-import sys, time, os, tqdm, torch, argparse, glob, subprocess, warnings, cv2, pickle, numpy, pdb, math, python_speech_features, json
+import sys, time, os, tqdm, torch, argparse, glob, subprocess, warnings, cv2, pickle, numpy, pdb, math, python_speech_features, json, threading
 
 from scipy import signal
 from shutil import rmtree
@@ -55,12 +55,9 @@ def scene_detect(args):
 	videoManager.start()
 	sceneManager.detect_scenes(frame_source = videoManager)
 	sceneList = sceneManager.get_scene_list(baseTimecode)
-	savePath = os.path.join(args.pyworkPath, 'scene.pckl')
 	if sceneList == []:
 		sceneList = [(videoManager.get_base_timecode(),videoManager.get_current_timecode())]
-	with open(savePath, 'wb') as fil:
-		pickle.dump(sceneList, fil)
-		sys.stderr.write('%s - scenes detected %d\n'%(args.videoFilePath, len(sceneList)))
+	sys.stderr.write('%s - scenes detected %d\n'%(args.videoFilePath, len(sceneList)))
 	return sceneList
 
 def inference_video(args):
@@ -77,9 +74,6 @@ def inference_video(args):
 		for bbox in bboxes:
 		  dets[-1].append({'frame':fidx, 'bbox':(bbox[:-1]).tolist(), 'conf':bbox[-1]}) # dets has the frames info, bbox info, conf info
 		sys.stderr.write('%s-%05d; %d dets\r' % (args.videoFilePath, fidx, len(dets[-1])))
-	savePath = os.path.join(args.pyworkPath,'faces.pckl')
-	with open(savePath, 'wb') as fil:
-		pickle.dump(dets, fil)
 	return dets
 
 def bb_intersection_over_union(boxA, boxB, evalCol = False):
@@ -129,19 +123,7 @@ def track_shot(args, sceneFaces):
 			bboxesI  = numpy.stack(bboxesI, axis=1)
 			if max(numpy.mean(bboxesI[:,2]-bboxesI[:,0]), numpy.mean(bboxesI[:,3]-bboxesI[:,1])) > args.minFaceSize:
 				tracks.append({'frame':frameI,'bbox':bboxesI})
-		## only one face is needed so i add filter code, we code based on the jiashe that bigest face is needed 
-	if len(tracks) <= 1:
-		return tracks
 	return tracks
-	# the_one = 0
-	# size_ = 0
-	# for idx,track in enumerate(tracks):
-	# 	this_size = max(numpy.mean(track['bbox'][:,2]-track['bbox'][:,0]), numpy.mean(track['bbox'][:,3]-track['bbox'][:,1]))
-	# 	if  this_size > size_:
-	# 		the_one = idx
-	# 		size_ = this_size
-	# print(the_one)
-	# return [tracks[the_one]]
 
 def crop_video(args, track, cropFile):
 	# CPU: crop the face clips
@@ -255,17 +237,17 @@ def visualization(tracks, scores, args):
 	firstImage = cv2.imread(flist[0])
 	fw = firstImage.shape[1]
 	fh = firstImage.shape[0]
-	vOut = cv2.VideoWriter(os.path.join(args.pyaviPath, 'video_only.avi'), cv2.VideoWriter_fourcc(*'XVID'), 25, (fw,fh))
-	colorDict = {0: 0, 1: 255}
+	# vOut = cv2.VideoWriter(os.path.join(args.pyaviPath, 'video_only.avi'), cv2.VideoWriter_fourcc(*'XVID'), 25, (fw,fh))
+	# colorDict = {0: 0, 1: 255}
 	spike_stat = -1
 	pre_area = [fw,fh,0,0]
 	for fidx, fname in tqdm.tqdm(enumerate(flist), total = len(flist)):
-		image = cv2.imread(fname)
+		# image = cv2.imread(fname)
 		for face in faces[fidx]:
-			clr = colorDict[int((face['score'] >= 0))]
-			txt = round(face['score'], 1)
-			cv2.rectangle(image, (int(face['x']-face['s']), int(face['y']-face['s'])), (int(face['x']+face['s']), int(face['y']+face['s'])),(0,clr,255-clr),3)
-			cv2.putText(image,'%s'%(txt), (int(face['x']-face['s']), int(face['y']-face['s']-3)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,clr,255-clr),5)
+			# clr = colorDict[int((face['score'] >= 0))]
+			# txt = round(face['score'], 1)
+			# cv2.rectangle(image, (int(face['x']-face['s']), int(face['y']-face['s'])), (int(face['x']+face['s']), int(face['y']+face['s'])),(0,clr,255-clr),3)
+			# cv2.putText(image,'%s'%(txt), (int(face['x']-face['s']), int(face['y']-face['s']-3)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,clr,255-clr),5)
 			if spike_stat < 0 and face['score'] > 0:
 				spike_stat = 1
 				area = [int(face['x']-face['s']), int(face['y']-face['s']), int(face['x']+face['s']), int(face['y']+face['s'])]
@@ -299,18 +281,47 @@ def visualization(tracks, scores, args):
 					top = int(cy-length/2)
 					crop_list.append({"time":{"start_sec":start_idx/25,"end_sec":end_idx/25},"box":{"left":left,"right":left+length,"top":top,"bottom":top+length}})
 				spike_stat = -1
-		vOut.write(image)
-	vOut.release()
+		# vOut.write(image)
+	# vOut.release()
 	crop_json = {}
 	for idx,item in enumerate(crop_list):
 		crop_json[f'{args.videoName}_{idx}'] = item
 	with open(f'{args.pyaviPath}/clips.json','w') as fp:
 		json.dump(crop_json,fp,indent=4)
-	command = ("ffmpeg -y -i %s -i %s -threads %d -c:v libx264 -c:a aac %s -loglevel panic" % \
-		(os.path.join(args.pyaviPath, 'video_only.avi'), os.path.join(args.pyaviPath, 'audio.wav'), \
-		args.nDataLoaderThread, os.path.join(args.pyaviPath,'video_out.mp4'))) 
-	output = subprocess.call(command, shell=True, stdout=None)
+	# command = ("ffmpeg -y -i %s -i %s -threads %d -c:v libx264 -c:a aac %s -loglevel panic" % \
+	# 	(os.path.join(args.pyaviPath, 'video_only.avi'), os.path.join(args.pyaviPath, 'audio.wav'), \
+	# 	args.nDataLoaderThread, os.path.join(args.pyaviPath,'video_out.mp4'))) 
+	# output = subprocess.call(command, shell=True, stdout=None)
 	return all_scores
+
+def inference_video_proxy(args):
+	savePath = os.path.join(args.pyworkPath,'faces.pckl')
+	if os.path.isfile(savePath):
+		with open(savePath, 'rb') as fil:
+			faces = pickle.load(fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face already existed in %s \r\n" %(args.pyworkPath))
+	else:
+		faces = inference_video(args)
+		with open(savePath, 'wb') as fil:
+			pickle.dump(faces, fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face detection and save in %s \r\n" %(args.pyworkPath))
+	return faces
+
+def scene_detect_proxy(args):
+	savePath = os.path.join(args.pyworkPath, 'scene.pckl')
+	if os.path.isfile(savePath):
+		with open(savePath, 'rb') as fil:
+			scene = pickle.load(fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scene already existed in %s \r\n" %(args.pyworkPath))
+	else:
+		scene = scene_detect(args)
+		with open(savePath, 'wb') as fil:
+			pickle.dump(scene, fil)
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scene detection and save in %s \r\n" %(args.pyworkPath))
+	return scene
+
+def thread_target(target_function, args, result, index):
+    result[index] = target_function(args)
 
 if __name__ == '__main__':
 	warnings.filterwarnings("ignore")
@@ -355,7 +366,7 @@ if __name__ == '__main__':
 	args.videoFilePath = os.path.join(args.pyaviPath, 'video.avi')
 	# If duration did not set, extract the whole video, otherwise extract the video from 'args.start' to 'args.start + args.duration'
 	if os.path.isfile(args.videoFilePath):
-		print(f'{args.videoFilePath} is exists')
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Video savalready existede in %s \r\n" %(args.videoFilePath))
 	else:
 		if args.duration == 0:
 			command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -async 1 -r 25 %s -loglevel panic" % \
@@ -369,7 +380,7 @@ if __name__ == '__main__':
 	# Extract audio
 	args.audioFilePath = os.path.join(args.pyaviPath, 'audio.wav')
 	if os.path.isfile(args.audioFilePath):
-		print(f'{args.audioFilePath} is exists')
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Audio already existed in %s \r\n" %(args.audioFilePath))
 	else:
 		command = ("ffmpeg -y -i %s -qscale:a 0 -ac 1 -vn -threads %d -ar 16000 %s -loglevel panic" % \
 			(args.videoFilePath, args.nDataLoaderThread, args.audioFilePath))
@@ -378,20 +389,31 @@ if __name__ == '__main__':
 
 	# Extract the video frames
 	if len(os.listdir(args.pyframesPath)):
-		print(f'{args.pyframesPath} is exists')
+		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Frames already existed in %s \r\n" %(args.pyframesPath))
 	else:
 		command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -f image2 %s -loglevel panic" % \
 			(args.videoFilePath, args.nDataLoaderThread, os.path.join(args.pyframesPath, '%06d.jpg'))) 
 		subprocess.call(command, shell=True, stdout=None)
 		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the frames and save in %s \r\n" %(args.pyframesPath))
 
-	# Scene detection for the video frames
-	scene = scene_detect(args)
-	sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Scene detection and save in %s \r\n" %(args.pyworkPath))	
+	scene_face = [None, None]
 
-	# Face detection for the video frames
-	faces = inference_video(args)
-	sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Face detection and save in %s \r\n" %(args.pyworkPath))
+	# 创建两个线程，分别运行两个函数
+	thread1 = threading.Thread(target=thread_target, args=(scene_detect_proxy, args, scene_face, 0))
+	thread2 = threading.Thread(target=thread_target, args=(inference_video_proxy, args, scene_face, 1))
+	# 启动线程
+	thread1.start()
+	thread2.start()
+	# 等待线程完成
+	thread1.join()
+	thread2.join()
+	scene = scene_face[0]
+	faces = scene_face[1]
+	# # Scene detection for the video frames
+	# scene = scene_detect_proxy(args)
+
+	# # Face detection for the video frames
+	# faces = inference_video_proxy(args)
 
 	# Face tracking
 	allTracks, vidTracks = [], []

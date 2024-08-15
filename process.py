@@ -11,6 +11,8 @@ if __name__ == "__main__":
     raw_vid_path = f'{args.work_dir}/{args.vid_id}.mp4'
     clip_json = f'{args.work_dir}/{args.vid_id}/pyavi/clips.json'
     save_folder = f'{args.work_dir}/clips/{args.vid_id}'
+    if os.path.isdir(save_folder):
+        subprocess.call(f'rm -r {save_folder}',shell=True)
     os.makedirs(save_folder,exist_ok=True)
     ffmpeg_cmd = ['ffmpeg']
     filters = []
@@ -24,7 +26,7 @@ if __name__ == "__main__":
         video_filter = f"[0:v]trim=start={start_sec}:end={end_sec},setpts=PTS-STARTPTS,crop={right-left}:{bottom-top}:{left}:{top},scale=512:512[v{index}];"
         audio_filter = f"[0:a]atrim=start={start_sec}:end={end_sec},asetpts=PTS-STARTPTS[a{index}];"
         filters.append(video_filter + audio_filter)
-        cmd_post.extend(['-map', f'[v{index}]', '-map', f'[a{index}]', '-c:v' ,'libx264' ,'-c:a' ,'aac',out_path])
+        cmd_post.extend(['-map', f'[v{index}]', '-map', f'[a{index}]', '-c:v' ,'libx264' ,'-c:a' ,'aac', '-y', out_path])
     filter_complex = ''.join(filters)[:-1]
     ffmpeg_cmd.insert(1, '-i')
     ffmpeg_cmd.insert(2, raw_vid_path)
